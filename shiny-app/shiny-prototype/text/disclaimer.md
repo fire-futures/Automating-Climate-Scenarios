@@ -1,0 +1,1 @@
+Disclaimer: Placeholder... Maybe something like "It's important to note that climate predictions focus on larger trends of how conditions are changing and represent averages of the future." 
