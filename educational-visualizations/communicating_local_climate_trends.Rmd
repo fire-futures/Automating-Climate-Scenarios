@@ -1,0 +1,558 @@
+---
+title: "communicating local climate trends"
+author: "Victoria"
+date: "2023-05-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries and Functions
+
+```{r}
+library(tidyverse)
+library(ggimage)
+library(here)
+library(caladaptr)
+library(ggplot2)
+library(leaflet)
+library(sf)
+library(httr)
+library(extrafont)
+
+functions_path <- here("..", "climate-scenarios", "build_functions")
+source(file.path(functions_path, "get_all_grid_cell_data.R"))
+source(file.path(functions_path, "caladapt_map.R"))
+source(file.path(functions_path, "find_grid_cell_centroid.R"))
+```
+
+## Read in and Wrangle Data for CanESM2 both RCPs
+
+```{r}
+# Model CanESM2 RCP 85
+ui_grid_cells <- c(46779)
+ui_rcp <- 85
+ui_gcm <- 'CanESM2'
+
+find_grid_cell_centroid() # creates the dataframe with the above user inputs that the get_all_grid_cell_data() function will use to grab data for
+centroids_of_interest %>% pmap(get_all_grid_cell_data, ui_gcm = ui_gcm, ui_rcp = ui_rcp) # grabs data for all grid cells 
+
+CanESM2_85_46779 <- grid_cell_46779 %>% 
+  mutate(model_rcp = 'CanESM2_85')
+
+# Model CanESM2 RCP 45
+ui_grid_cells <- c(46779)
+ui_rcp <- 45
+ui_gcm <- 'CanESM2'
+
+find_grid_cell_centroid() # creates the dataframe with the above user inputs that the get_all_grid_cell_data() function will use to grab data for
+centroids_of_interest %>% pmap(get_all_grid_cell_data, ui_gcm = ui_gcm, ui_rcp = ui_rcp) # grabs data for all grid cells
+
+CanESM2_45_46779 <- grid_cell_46779 %>% 
+  mutate(model_rcp = 'CanESM2_45')
+```
+
+## Create Map Graphic
+
+```{r}
+
+```
+
+## Maximum Temperature: Combine Data and Plot
+
+```{r}
+daily_data <- CanESM2_85_46779 %>% 
+  select(time, max_temp) %>% 
+  mutate(max_temp = max_temp * 1.8 + 32)
+
+# plot
+
+# Set Montserrat as the default font
+theme_set(theme_bw(base_family = "Montserrat"))
+
+max_temp_plot <- ggplot() +
+  
+  # max temp daily lines and fill inbetween
+  geom_line(data = daily_data, aes(x = time, y = max_temp), color = "#EAE7E5") +
+  
+  # annotation for daily range
+      # label
+  annotate("text", x = as.Date("2061-01-01"), y = 60,
+           label = "Daily Variation", vjust = -1, color = '#606060', size = 5) +
+      # line
+  annotate("segment", 
+           x = as.Date("2049-01-01"), xend = as.Date("2049-01-01"), 
+           y = 51, yend = 109,
+           color = "#606060",
+           arrow = arrow(ends = "both", angle = 90, length = unit(.1, "cm"))) +
+
+  # regression line
+    geom_smooth(data = daily_data, aes(x = time, y = max_temp), color = '#CC4C34', size = 1, method = "lm", se = FALSE) +
+  
+  # annotation for regression line
+  annotate("text", x = as.Date("1969-01-01"), y = 70, 
+           label = "Average Trend", vjust = -1, color = '#CC4C34', size = 5) +
+
+  # theme
+  theme_bw() + 
+  labs(
+    title = "\nSanta Barbara Daily Maximum Temperature (°F) Trends Upward",
+    caption = "Data Source: https://cal-adapt.org/data/download/ \n *p-value: < 2.2e-16",
+    subtitle = "Daily Maximum Temperature Is Projected to Increase by 0.74°F* each Decade, on Average",
+    y = "\nMaximum Temperature (°F)\n",
+    x = "\nYear (1950 - 2100)"
+  ) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 20, color = "#626262", hjust = 0),
+    plot.subtitle = element_text(size = 15, color = "#626262", hjust = 0),
+    axis.title.x = element_text(size = 13, color = "#626262"),
+    axis.title.y = element_text(size = 13, color = "#626262"),
+    axis.text = element_text(size = 11, color = "#626262"),
+    plot.caption = element_text(size = 10, color = "#626262"),
+    # remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  )  +
+  
+  # set breaks to match between min temp and max temp plots
+  scale_y_continuous(breaks = seq(30, 120, by = 10),
+                     sec.axis = dup_axis()
+                     )
+
+# export maximum temperature plot
+ggsave(filename = "maximum_temperature_plot.png", plot = max_temp_plot, width = 13.3, height = 7.5, dpi = 300)
+
+# significance testing
+# for the yearly data since that's what we're plotting 
+lm_model <- lm(max_temp ~ time, data = daily_data)
+summary_model <- summary(lm_model)
+summary_model
+```
+
+## Minimum Temperature: Combine Data and Plot
+
+```{r}
+daily_data <- CanESM2_85_46779 %>% 
+  select(time, min_temp) %>% 
+  mutate(min_temp = min_temp * 1.8 + 32)
+
+# plot
+
+# Set Montserrat as the default font
+theme_set(theme_bw(base_family = "Montserrat"))
+
+min_temp_plot <- ggplot() +
+  
+  # max temp daily lines and fill inbetween
+  geom_line(data = daily_data, aes(x = time, y = min_temp), color = "#EAE7E5") +
+  
+    # annotation for daily range
+      # label
+  annotate("text", x = as.Date("2061-01-01"), y = 60,
+           label = "Daily Variation", vjust = -1, color = '#606060', size = 5) +
+      # line
+  annotate("segment", 
+           x = as.Date("2049-01-01"), xend = as.Date("2049-01-01"), 
+           y = 28, yend = 71,
+           color = "#606060",
+           arrow = arrow(ends = "both", angle = 90, length = unit(.1, "cm"))) +
+
+  # regression line
+    geom_smooth(data = daily_data, aes(x = time, y = min_temp), color = '#CC4C34', size = 1, method = "lm", se = FALSE) +
+  
+  # labels for lines
+  #annotate("text", x = unique(trend_data$water_year)[20], y = 60, 
+          # label = "Potential Daily Variation", vjust = -1, color = 'white', size = 5) +
+  annotate("text", x = as.Date("1969-01-01"), y = 42, 
+           label = "Average Trend", vjust = -1, color = '#CC4C34', size = 5) +
+
+  # theme
+  theme_bw() + 
+  labs(
+    title = "\nSanta Barbara Daily Minimum Temperature (°F) Trends Upward",
+    caption = "Data Source: https://cal-adapt.org/data/download/ \n *p-value: < 2.2e-16",
+    subtitle = "Daily Minimum Temperature Is Projected to Increase by 0.73°F* each Decade, on Average",
+    y = "\nMinimum Temperature (°F)\n",
+    x = "\nYear (1950 - 2100)"
+  ) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 20, color = "#626262", hjust = 0),
+    plot.subtitle = element_text(size = 15, color = "#626262", hjust = 0),
+    axis.title.x = element_text(size = 13, color = "#626262"),
+    axis.title.y = element_text(size = 13, color = "#626262"),
+    axis.text = element_text(size = 11, color = "#626262"),
+    plot.caption = element_text(size = 10, color = "#626262"),
+    # remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  )  +
+  
+  # set breaks to match between min temp and max temp plots and add a dual axis
+  scale_y_continuous(breaks = seq(10, 80, by = 10),
+                     sec.axis = dup_axis()
+                     )
+
+# export maximum temperature plot
+ggsave(filename = "minimum_temperature_plot.png", plot = min_temp_plot, width = 13.3, height = 7.5, dpi = 300)
+
+# significance testing
+# for the yearly data since that's what we're plotting 
+lm_model <- lm(min_temp ~ time, data = daily_data)
+summary_model <- summary(lm_model)
+summary_model
+```
+
+## Maximum Relative Humidity: Combine Data and Plot
+
+```{r}
+daily_data <- CanESM2_85_46779 %>%
+  select(time, max_humidity) %>% 
+  # change units to percents
+  mutate(max_humidity = max_humidity * 100)
+
+# plot
+
+# Set Montserrat as the default font
+theme_set(theme_bw(base_family = "Montserrat"))
+
+max_rh_plot <- ggplot() +
+  
+  # max rh daily lines and fill inbetween
+  geom_line(data = daily_data, aes(x = time, y = max_humidity), color = "#EAE7E5") +
+  
+  # annotation for daily range
+      # label
+  annotate("text", x = as.Date("2061-01-01"), y = 60,
+           label = "Daily Variation", vjust = -1, color = '#606060', size = 5) +
+      # line
+  annotate("segment", 
+           x = as.Date("2049-01-01"), xend = as.Date("2049-01-01"), 
+           y = 33, yend = 100,
+           color = "#606060",
+           arrow = arrow(ends = "both", angle = 90, length = unit(.1, "cm"))) +
+  
+    # regression line
+  geom_smooth(data = daily_data, aes(x = time, y = max_humidity), color = '#CC4C34', size = 1, method = "lm", se = FALSE) +
+  
+  # labels for trend line
+  annotate("text", x = as.Date("1969-01-01"), y = 80, 
+           label = "Average Trend", vjust = -1, color = '#CC4C34', size = 5) +
+
+  # theme
+  theme_bw() + 
+  labs(
+    title = "\nSanta Barbara Daily Maximum Relative Humidity (%) Trends Upward",
+    caption = "Data Source: https://cal-adapt.org/data/download/ \n *p-value: < 2.2e-16",
+    subtitle = "Daily Maximum Relative Humidity Is Projected to Increase by 0.16%* each Decade, on Average",
+    y = "\nMaximum Relative Humidity (%)\n",
+    x = "\nYear (1950 - 2100)"
+  ) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 20, color = "#626262", hjust = 0),
+    plot.subtitle = element_text(size = 15, color = "#626262", hjust = 0),
+    axis.title.x = element_text(size = 13, color = "#626262"),
+    axis.title.y = element_text(size = 13, color = "#626262"),
+    axis.text = element_text(size = 11, color = "#626262"),
+    plot.caption = element_text(size = 10, color = "#626262"),
+    # remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  
+  # set breaks to match between min rh and max rh plots and add a dual axis
+  scale_y_continuous(breaks = seq(0, 100, by = 25),
+                     sec.axis = dup_axis()
+                     )
+
+# you can see that max humidity has less area in the lower area than in the future. 
+
+# export
+ggsave(filename = "maximum_relativehumidity_plot.png", plot = max_rh_plot, width = 13.3, height = 7.5, dpi = 300)
+
+# significance testing
+# for the yearly data since that's what we're plotting 
+lm_model <- lm(max_humidity ~ time, data = daily_data)
+summary_model <- summary(lm_model)
+summary_model
+```
+
+## Minimum Relative Humidity: Combine Data and Plot
+
+```{r}
+daily_data <- CanESM2_85_46779 %>%
+  select(time, min_humidity) %>% 
+  # change units to percents
+  mutate(min_humidity = min_humidity * 100)
+
+# plot
+
+# Set Montserrat as the default font
+theme_set(theme_bw(base_family = "Montserrat"))
+
+min_rh_plot <- ggplot() +
+  
+  # max rh daily lines and fill inbetween
+  geom_line(data = daily_data, aes(x = time, y = min_humidity), color = "#EAE7E5") +
+  
+  # annotation for daily range
+      # label
+  annotate("text", x = as.Date("2061-01-01"), y = 60,
+           label = "Daily Variation", vjust = -1, color = '#606060', size = 5) +
+      # line
+  annotate("segment", 
+           x = as.Date("2049-01-01"), xend = as.Date("2049-01-01"), 
+           y = 12, yend = 72,
+           color = "#606060",
+           arrow = arrow(ends = "both", angle = 90, length = unit(.1, "cm"))) +
+  
+  # trend line 
+  #geom_line(data = trend_data, aes(x = time, y = avg_min_rh), color = '#CC4C34', size = 1) +
+
+  # regression line
+  geom_smooth(data = daily_data, aes(x = time, y = min_humidity), color = '#CC4C34', size = 1, method = "lm", se = FALSE) +
+  
+  # labels for trend line
+  annotate("text", x = as.Date("1969-01-01"), y = 34, 
+           label = "Average Trend", color = '#CC4C34', size = 5) +
+
+  # theme
+  theme_bw() + 
+  labs(
+    title = "\nSanta Barbara Daily Minimum Relative Humidity (%) Trends Upward",
+    caption = "Data Source: https://cal-adapt.org/data/download/ \n *p-value: < 2.2e-16",
+    subtitle = "Daily Minimum Relative Humidity Is Projected to Increase by 0.17%* each Decade, on Average",
+    y = "\nMinimum Relative Humidity (%)\n",
+    x = "\nYear (1950 - 2100)"
+  ) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 20, color = "#626262", hjust = 0),
+    plot.subtitle = element_text(size = 15, color = "#626262", hjust = 0),
+    axis.title.x = element_text(size = 13, color = "#626262"),
+    axis.title.y = element_text(size = 13, color = "#626262"),
+    axis.text = element_text(size = 11, color = "#626262"),
+    plot.caption = element_text(size = 10, color = "#626262"),
+    # remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  
+  # set breaks to match between min rh and max rh plots and add a dual axis
+  scale_y_continuous(breaks = seq(0, 100, by = 25),
+                     sec.axis = dup_axis()
+                     )
+
+# export
+ggsave(filename = "minimum_relativehumidity_plot.png", plot = min_rh_plot, width = 13.3, height = 7.5, dpi = 300)
+
+# significance testing
+# for the yearly data since that's what we're plotting 
+lm_model <- lm(min_humidity ~ time, data = daily_data)
+summary_model <- summary(lm_model)
+summary_model
+```
+
+## Wind: Combine Data and Plot
+
+```{r}
+
+# just CanESM
+daily_data <- CanESM2_85_46779 %>% 
+  # convert m/s to mph since this is a better known unit
+  mutate(wind = wind * 2.23694) %>% 
+  select(time, wind)
+
+# plot
+
+# Set Montserrat as the default font
+theme_set(theme_bw(base_family = "Montserrat"))
+
+wind_plot <- ggplot() +
+  
+  # max rh daily lines and fill inbetween
+  geom_line(data = daily_data, aes(x = time, y = wind), color = "#EAE7E5") +
+  
+   # annotation for daily range
+      # label
+  annotate("text", x = as.Date("2061-01-01"), y = 5,
+  label = "Daily Variation", color = '#606060', size = 5) +
+      # line
+  annotate("segment",
+           x = as.Date("2049-01-01"), xend = as.Date("2049-01-01"),
+           y = 2, yend = 27,
+           color = "#606060",
+           arrow = arrow(ends = "both", angle = 90, length = unit(.1, "cm"))) +
+
+    # regression line
+  geom_smooth(data = daily_data, aes(x = time, y = wind), color = '#CC4C34', size = 1, method = "lm", se = FALSE) +
+  
+  # labels for trend line
+  annotate("text", x = as.Date("1969-01-01"), y = 10, 
+           label = "Average Trend", vjust = -1, color = '#CC4C34', size = 5) +
+
+  # theme
+  theme_bw() + 
+  labs(
+    title = "\nSanta Barbara Daily Wind Speed (mph) Trends Downward",
+    caption = "Data Source: https://cal-adapt.org/data/download/ \n *p-value: < 2.2e-16",
+    subtitle = "Daily Wind Speeds Are Projected to Decrease by 0.09 mph* each Decade, on Average",
+    y = "\nWind Speed (mph)\n",
+    x = "\nYear (1950 - 2100)"
+  ) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 20, color = "#626262", hjust = 0),
+    plot.subtitle = element_text(size = 15, color = "#626262", hjust = 0),
+    axis.title.x = element_text(size = 13, color = "#626262"),
+    axis.title.y = element_text(size = 13, color = "#626262"),
+    axis.text = element_text(size = 11, color = "#626262"),
+    plot.caption = element_text(size = 10, color = "#626262"),
+    # remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  
+  # add a dual axis
+  scale_y_continuous(sec.axis = dup_axis())
+
+# export
+ggsave(filename = "wind_plot.png", plot = wind_plot, width = 13.3, height = 7.5, dpi = 300)
+
+# significance testing
+# for the yearly data since that's what we're plotting 
+lm_model <- lm(wind ~ time, data = daily_data)
+summary_model <- summary(lm_model)
+summary_model # p-value: < 2.2e-16, slope: -0.000243 per decade
+```
+
+## Max Storm Size: Combine Data and Plot
+
+```{r}
+
+# daily data
+daily_data <- CanESM2_85_46779 %>% 
+  # convert units back from kg/m^2/s to m then convert to inches
+  mutate(precip_newunits = precip * (1000/86400) * 39.3701) %>% 
+  # compute 3 day window of storm_size 
+  arrange(time) %>%
+  mutate(storm_size = rollapply(precip_newunits, width = 3, by = 3, FUN = sum, align = "right", fill = NA, partial = TRUE, na.rm = TRUE)) %>% 
+  select(time, precip_newunits, storm_size) %>% 
+  na.omit()
+
+# trend line data
+trend_data <- CanESM2_85_46779 %>% 
+  # convert units back from kg/m^2/s to m then convert to inches
+  mutate(precip_newunits = precip * (1000/86400) * 39.3701) %>% 
+  # compute 3 day window of storm_size 
+  arrange(time) %>%
+  mutate(storm_size = rollapply(precip_newunits, width = 3, by = 3, FUN = sum, align = "right", fill = NA, partial = TRUE, na.rm = TRUE)) %>% 
+  select(time, water_year, precip_newunits, storm_size) %>% 
+  na.omit() %>% 
+  # compute max storm size per year
+  group_by(water_year) %>% 
+  summarise(max_storm = max(storm_size)) %>% 
+   mutate(time = as.Date(paste0(water_year, "-01-01")))
+  
+# plot
+
+# Set Montserrat as the default font
+theme_set(theme_bw(base_family = "Montserrat"))
+
+precip_plot <- ggplot() +
+  
+  # max rh daily lines and fill inbetween
+  geom_line(data = daily_data, aes(x = time, y = storm_size), color = "#EAE7E5") +
+  
+  # annotation for daily range
+      # label
+  annotate("text", x = as.Date("2065-01-01"), y = .05,
+           label = "Storm Size Variation", color = '#606060', size = 5) +
+      # line
+  annotate("segment", 
+           x = as.Date("2049-01-01"), xend = as.Date("2049-01-01"), 
+           y = 0, yend = .17,
+           color = "#606060",
+           arrow = arrow(ends = "both", angle = 90, length = unit(.1, "cm"))) +
+  
+  # regression line
+  geom_smooth(data = trend_data, aes(x = time, y = max_storm), color = '#CC4C34', size = 1, method = "lm", se = FALSE) +
+  
+  # labels for trend line
+  annotate("text", x = as.Date("1969-01-01"), y = 0.065, 
+           label = "Yearly Maximum Storm Size Trend", vjust = -1, color = '#CC4C34', size = 5) +
+  
+  #annotation for the trend line slope
+ # annotate("text", x = as.Date("2000-01-01"), y = 0.1,
+  #         label = "storm sizes projected to \n increase X inches* per decade", color = '#CC4C34', size = 4) +
+  
+
+  # theme
+  theme_bw() + 
+  labs(
+    title = "\nSanta Barbara Yearly Maximum Rainstorm Size (inches every 3 days) Trends Upward",
+    caption = "\nData Source: https://cal-adapt.org/data/download/ \n *p-value: 0.000326",
+    subtitle = "Rainstorm Sizes Are Projected to Increase by 0.002 Inches* each Decade, on Average",
+    y = "\nRainstorm Size (inches every 3 days)\n",
+    x = "\nYear (1950 - 2100)"
+  ) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 20, color = "#626262", hjust = 0),
+    plot.subtitle = element_text(size = 15, color = "#626262", hjust = 0),
+    axis.title.x = element_text(size = 13, color = "#626262"),
+    axis.title.y = element_text(size = 13, color = "#626262"),
+    axis.text = element_text(size = 11, color = "#626262"),
+    plot.caption = element_text(size = 10, color = "#626262"),
+    # remove vertical grid lines
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+  ) + 
+  
+  # add a dual axis
+  scale_y_continuous(sec.axis = dup_axis())
+
+# export
+ggsave(filename = "precip_plot.png", plot = precip_plot, width = 13.3, height = 7.5, dpi = 300)
+
+# significance testing
+# for the yearly data since that's what we're plotting 
+lm_model <- lm(max_storm ~ time, data = trend_data)
+summary_model <- summary(lm_model)
+summary_model
+```
+
+## Appendix: Other Trend Line Ideas
+
+```{r}
+# get a yearly average trend line from CanESM
+# yearly_dat <- CanESM2_85_46779 %>% 
+#   group_by(water_year) %>% 
+#   summarise(max_temp = mean(max_temp), min_temp = mean(min_temp)) %>% 
+#   mutate(water_year = as.Date(paste0(water_year, "-01-01"))) %>% 
+#   mutate(max_temp = max_temp * 1.8 + 32) %>% 
+#   mutate(min_temp = min_temp * 1.8 + 32)
+
+# average for all 
+# trend_data_t <- combined_df %>% 
+#   group_by(water_year) %>% 
+#   summarise(max_temp = mean(max_temp), min_temp = mean(min_temp)) %>% 
+#   mutate(water_year = as.Date(paste0(water_year, "-01-01"))) %>% 
+#   mutate(max_temp = max_temp * 1.8 + 32) %>% 
+#   mutate(min_temp = min_temp * 1.8 + 32)
+
+# trend_data <- combined_df %>% 
+#   mutate(group = cut(time, breaks = "30 days")) %>% 
+#   group_by(group) %>% 
+#   summarise(max_temp = mean(max_temp), min_temp = mean(min_temp)) %>% 
+#   mutate(max_temp = max_temp * 1.8 + 32) %>% 
+#   mutate(min_temp = min_temp * 1.8 + 32) %>% 
+#   mutate(time = as.Date(group)) %>% 
+#   select(-group)
+```
+
+## 
