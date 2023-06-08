@@ -1,0 +1,223 @@
+---
+title: "Creating Climate Scenarios Workflow"
+author: "Fire Futures"
+date: "2023-04-25"
+output: html_document
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+## This Rmarkdown provides step by step instructions for creating climate scenarios and exporting them into RHESSys formatted time series.
+
+Summary of approach: Here, we demonstrate a process for creating a range of unique climate scenarios by stitching together pieces of existing climate model projections. The segments can be defined as either years or seasons (based on wet or dry periods). To create each segment, we filter the climate model projections to identify seasons/years that match specified climate characteristics of interest. If multiple years/seasons meet the criteria, a random sample of the available segments is selected, allowing for a variety of scenarios that fit the same baseline criteria. This sampling and reshuffling process is repeated several times, often with varying climate criteria per segment, to create a number of individual time segments. The resulting segments are then joined together to form a continuous time series with daily values for the climate variables of interest.
+
+All functions are thoroughly documented and exist in the "build_functions" folder.
+
+**Glossary:**
+
+Sample cell: The grid cell that the user will use to query data according to the specified climate criteria, as defined below. Since grid cells are linked in time and space, only one grid cell can be used to form a scenario, and all other grid cells of interest are stitched together by the same GCM, RCP, and segment as the sample cell.
+
+Segment type: Segment type represents the type of time frame surrounding a segment. This project is currently configured for two segment types: year and season.
+
+Sample window: A sampling window represents the "window" of climate segments before and after the segment of interest that are available for sampling. For example, if a user builds a segment for year 2025, and specifies a sampling window of 20 years, this means that years 2025+/- 10 years (i.e. 2015 - 2030) will be used to sample from for the segment in 2025. Similarly, for a segment in 2026, years 2016 - 2036 will be used for sampling.
+
+```{r Load Packages}
+knitr::opts_chunk$set(echo = TRUE)
+library(strex) #string manipulation
+library(tidyverse)
+library(lubridate) #dates
+library(purrr) #applying functions on data structures
+library(here) #setting file path to wd
+library(sf) #spatial map
+library(leaflet) #creating a map
+library(caladaptr)  # remotes::install_github("ucanr-igis/caladaptr") or install.packages("caladaptr") 
+library(ggplot2)
+library(ggrepel) #string manipulation
+library(dplyr)
+```
+
+Sourcing all of the functions needed to build scenarios & importing example data. All functions are in the build_segments-functions folder of the climate-scenarios repository
+
+```{r Source Functions}
+#obtain list of files ending in .R from build_functions
+r_files <- list.files("build_functions", pattern = "\\.R$", full.names = TRUE)
+#source in these files
+for (file in r_files) {
+  source(file)
+}
+```
+
+Before obtaining the data from the API, you need to specify the spatial extent of interest, as well as what GCM model and RCP emissions assumption you would like to use.
+
+Using the Cal Adapt API, you can examine the Cal Adapt Map to find your grid cells of interest. Click on individual grid cells to obtain the ID. You can copy them into the ui_grid_cells variable below.
+
+```{r Load CalAdapt Map}
+# function to load Cal Adapt grid cell map
+caladapt_map()
+```
+
+Assign your base data below
+
+```{r Base Data}
+# specify your RCP, GCM, and grid cells
+ui_rcp <- 85 # options: 45, 85
+
+ui_gcm <- 'MIROC5' # options: 'HadGEM2-ES', 'CNRM-CM5', 'CanESM2', 'MIROC5'
+
+ui_grid_cells <- c(30693, 30694) # please see map, above, and select grid cells of interest. WHEN CHANGING THIS -> MUST ALSO CHANGE ui_sample_cell on line 89 and 91
+```
+
+Now that we've specified what our data should be, we can access the API to obtain it.
+
+```{r Get Data}
+# specify if you will use the cal adapt data api
+ui_caladapt_ind = 'Y' # mark as Y if using cal adapt data through this API
+
+# obtain grid cell ID + latitude and longitude
+find_grid_cell_centroid(ui_grid_cells = ui_grid_cells) #creates the data frame with the above user inputs that the get_all_grid_cell_data() function will use to grab data for
+
+# use spatial information and grid cell ID to obtain daily time series data for each grid cell
+centroids_of_interest %>% pmap(get_all_grid_cell_data, ui_gcm = ui_gcm, ui_rcp = ui_rcp) #pmap applies get_all_grid_cell_data() to each grid cell of interest
+```
+
+Specify your sample cell for the data. This grid cell must be included in the ui_grid_cells vector above (line 70).
+
+```{r}
+ui_sample_cell <- grid_cell_30693_MIROC5_85 # Choose your sample grid cell of interest. It should match one of the grid cells chosen in the spatial extent defined above. 
+
+ui_sample_cell_metaData <- 'grid_cell_30693_MIROC5_85'# In quotes for your metadata file
+```
+
+You can also input your own data. Just Make Sure You Follow This Structure: - naming conventions: for each grid cell, name each as "grid_cell_X"
+
+columns:
+
+     "time"         "wind"         "min_humidity" "max_humidity" "min_temp"     "max_temp"     "precip"       "water_year"   "season"   
+
+Uncomment the chuck below if you would like to build off of an example grid cell
+
+```{r User Data Upload}
+#upload data here
+
+#To get a sense for the format your data should be in and how to read it in, below is an example of a CalAdapt grid cell. Make sure your data follows the same format
+#grid_cell_46662 <- read_csv("data_example.csv")
+#head(grid_cell_46662)
+```
+
+Now create your table to designate desired percentile filters for each segment. Make sure the length of the list is the desired number of segments you'd like. 
+
+In order to run, at least one climate variable must be specified for each segment. If you would like to sample from all available segments within your sampling window, input one climate variable and designate your lower and upper percentiles to be 0 & 1. All climate variables that a user doesn't specify will default to the full 0-1 range. 
+
+You can add information in the segment and not specification to include within the final metadata file for your created scenario. Repeat_segment allows you to repeat any of the climate criteria (or a few in order) your desired amount of times
+
+```{r, Example Percentile Table}
+criteria_list <- list(
+  data.frame(
+    segment_spec_id = '1',
+    notes = 'Dry',
+    variable = c('precip'),
+    lower = c(0),
+    upper = c(.20)
+  ),
+  data.frame(
+    segment_spec_id = '2',
+    notes = 'Dry & Windy',
+    variable = c('precip', 'wind'),
+    lower = c(0, .8),
+    upper = c(.2, 1)
+  ),
+  data.frame(
+    segment_spec_id = '3',
+    notes = 'Dry',
+    variable = c('precip'),
+    lower = c(0),
+    upper = c(.20)
+  ),
+  data.frame(
+    segment_spec_id = '4',
+    notes = 'Wet',
+    variable = c('precip'),
+    lower = c(.8),
+    upper = c(1)
+  ),
+    data.frame(
+    segment_spec_id = '5',
+    notes = 'Warm',
+    variable = c('max_temp'),
+    lower = c(.7),
+    upper = c(1)
+  )
+)
+criteria_list <- repeat_segments(criteria_list, c(1,2,3,4,5), 4) #repeat segments 1-4 four times
+```
+
+Finding segments based on years:
+
+Here we will use the find_matches function and specify all of the information we want. Instead of specifying rcp, gcm and sample cell you can specify a data frame (base_data = dat).
+
+```{r finding segments that match climate percentiles}
+ui_segment_type <- 'year' #year or season
+#season is defined in find_matches.R currently: wet is months October 1st-March 31st and dry April 1st-September 30th
+
+ui_start_date <- '2023/10/01' # YYYY/10/01. #ALL SCENARIOS MUST BEGIN ON OCTOBER 1ST (THE FIRST DAY OF THE WATER YEAR)
+
+ui_climate_criteria_table <- criteria_list #Defined above
+
+ui_sample_window <- 20 #Even number: split above and below start date
+
+#find_matches uses the specified climate criteria to determine which segments in the data are appropriate to sample from based on percentile specifications
+segment_samples <<-
+  find_matches(
+    base_data = ui_sample_cell, 
+    start_date = ui_start_date,
+    sample_window = ui_sample_window,
+    climate_criteria_table = ui_climate_criteria_table,
+    segment_type = ui_segment_type,
+  )
+
+# Check out the first few lines of segment_samples
+head(segment_samples)
+
+# Count the number of elements in each list index
+number_matches <- lapply(segment_samples, function(x) length(x))
+
+# Create a dataframe with the index and the count of years/seasons
+number_matches <- data.frame(Count = unlist(number_matches))
+
+# Print the results
+print(number_matches)
+```
+
+Now you can run randomly_select, which samples from the segment_samples available and chooses one segment at random to be stitched together to create your final time series.
+
+```{r randomly selecting a sample for each segment}
+randomly_select(segment_samples = segment_samples) #This will only work if all segments have something to sample from
+```
+
+Now you can build the scenarios for each grid cell and convert it to RHESSys format! All of the output exists in the all_grid_cell_output folder in your directory.
+
+```{r }
+find_all_grid_cells() #Accesses any df from the global environment with 'grid_cell' in the title
+get_all_grid_cells(df_names = ui_df_names,
+                   ui_gcm = ui_gcm,
+                   ui_rcp = ui_rcp) #loops through all grid cells in desired spatial extent and stitches the randomly selected segments to create a continuous time series with daily values 
+```
+
+To make sure your desired output matches your expectations, we recommend that you plot it. Please change the time series call to match your sampling grid cell. And your desired years to plot.
+
+```{r}
+segments_plots(time_series = grid_cell_30693_MIROC5_85_output, upper_year = 2034 , lower_year = 2024) #Change to your sample grid cell
+```
+
+```{r}
+precipitation_plot(time_series = grid_cell_30693_MIROC5_85_output) #Change to your sample grid cell
+```
+
+Finally, run this function to generate your metadata file.
+
+```{r}
+get_metadata(root_output_folder_name) #adds metadata file to the all_grid_cell_output folder in your directory 
+```
+
+If you want to create a new scenario with the same model and RCP, save your output folder to your local computer and then delete it from your climate-scenario repository before restarting.

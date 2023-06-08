@@ -1,0 +1,85 @@
+---
+title: "presents cal adapt map with ids to the user, the user selects the ids to work with, then we query through the caladapt api to pull in this data, then we clean the data so that we can use the cal_adapt_4models_allscenarios.R data cleaning functions."
+output: html_document
+date: "2023-04-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sf)
+library(leaflet)
+library(caladaptr)
+library(ggplot2)
+library(ggrepel)
+```
+
+```{r}
+caladaptpolygons <- ca_locagrid_geom()
+test <- ca_aoipreset_geom(aoipreset, quiet = FALSE)
+aoipreset_types
+
+map <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = caladaptpolygons,
+             label = ~id,  # Display the id column as label
+             labelOptions = labelOptions())
+             
+map
+
+             
+```
+
+
+```{r}
+all_grid_cells <- list(46785,46899)
+```
+
+```{r}
+allgridcells_climate_data <- 
+  #ca_loc_pt(coords = c(-119.7188, 34.46875)) %>%     ## specify a location
+  ca_loc_aoipreset(type = "counties", idfld = "fips", idval = "06045") %>% 
+  ca_gcm(c("HadGEM2-ES", "CNRM-CM5", "CanESM2","MIROC5")) %>%     
+  ca_scenario(c("historical","rcp45","rcp85")) %>%                               ## select emission scenarios(s)
+  ca_cvar(c("tasmax", "tasmin")) %>%                                          ## select climate variables
+  ca_period("day") %>%                                             ## select a temporal aggregation period
+  ca_years(start = 2020, end = 2050)    
+```
+
+```{r}
+tbl <- allgridcells_climate_data %>% ca_getvals_tbl(quiet = TRUE)
+head(sac_tasmax_tbl)
+dim(sac_tasmax_tbl)
+```
+
+
+```{r}
+mendocino_cap <- ca_loc_aoipreset(type = "counties", idfld = "fips", idval = "06045") %>% 
+  ca_livneh(TRUE) %>% 
+  ca_period("year") %>% 
+  ca_cvar("pr") %>% 
+  ca_years(start = 1970, end = 2010)
+
+plot(mendocino_cap)
+```
+
+
+```{r}
+lrec_tasmax_prj_cap <- ca_loc_pt(id = 1) %>% 
+  ca_period("day") %>% 
+  ca_gcm(gcms[1:4]) %>% 
+  ca_scenario(c("rcp45", "rcp85")) %>% 
+  ca_cvar("tasmax") %>% 
+  ca_years(start = 2080, end = 2099)
+  
+lrec_tasmax_prj_cap %>% ca_preflight()
+```
+
+
+what i'm looking to do:
+- have a way for users to choose grid cells that they want and get all these variables
+- i was thinking that i'd have some sort of map of cal adapt grid cells and then users would choose the grid cells they want and we'd query the api for those grid cells - is that possible because i couldn't see a way to query for ids that even look like this. i also couldn't find relative humidity with this query
+
+```{r}
+```
+

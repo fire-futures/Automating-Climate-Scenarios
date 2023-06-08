@@ -1,0 +1,143 @@
+Time Series Table
+
+```{r}
+library(knitr)
+library(kableExtra)
+
+time_series <- grid_cell_23696_time_series %>% 
+  select(old_date, min_temp, max_temp, precip, min_humidity, max_humidity, wind) %>%
+  mutate(old_date = round(old_date,3), min_temp = round(min_temp,3), max_temp = round(max_temp,3), precip = round(precip, 3), min_humidity = round(min_humidity,3), max_humidity = round(max_humidity,3), wind = round(wind,3)) %>% 
+  rename(Date = old_date, "Min Temp (°C)" = min_temp, "Max Temp (°C)" = max_temp, Precipitation = precip, "Min Humidity" = min_humidity, "Max Humidity" = max_humidity, Wind = wind) %>% 
+  filter(year(Date) == 2024)
+
+table <- kable(time_series, format = "html", align = "c", caption = "Time Series Data")
+
+finaltable <- table %>%
+  kable_classic() %>%       
+  kable_styling(bootstrap_options = c("striped"),
+                position = "center",
+                stripe_color = c("#E0E0E0", "white")) %>% 
+  add_header_above(c(" " = 1, "Temperature (°C)" = 2, " " = 1, "Humidity" = 2, " " = 1))
+
+
+table %>%
+  kable_classic() %>%  # Apply a classic table theme
+  kable_styling(bootstrap_options = c("striped"),
+                position = "center",
+                stripe_color = c("#E0E0E0", "white"),
+                full_width = FALSE) %>%  
+  row_spec(row = 0, bold = TRUE, color = "white", background = "#9E9E9E") %>%   # Header row formatting
+  row_spec(row = c(1, nrow(time_series)), bold = TRUE)
+
+print(finaltable)
+
+
+
+```
+
+Historic Data - Average monthly temp
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+
+monthly_avg_temp <- CanESM2_historical %>% 
+  group_by(Year = year(time), Month = month(time)) %>%
+  summarize(AvgT = mean(max_temp_1, na.rm = TRUE))
+
+ggplot(monthly_avg_temp, aes(x = Month, y = AvgT, group = Year)) +
+  geom_line() +
+  labs(x = "Month", y = "Average Monthly Temp") +
+  scale_x_continuous(breaks = 1:12, labels = month.abb) +
+  theme_minimal()
+
+```
+
+Historic 1960-1969
+
+```{r}
+Can_1960s <- CanESM2_historical %>%
+  mutate(max_temp_1 = (max_temp_1 - 32) * 5 / 9) %>% 
+  filter(year(time) >= 1960 & year(time) <= 1969) %>%
+  summarize(AvgTemp = mean(max_temp_1, na.rm = TRUE))
+
+CNRM_1960s <- CNRM_CM5_historical %>%
+  mutate(max_temp_1 = (max_temp_1 - 32) * 5 / 9) %>% 
+  filter(year(time) >= 1960 & year(time) <= 1969) %>%
+  summarize(AvgTemp = mean(max_temp_1, na.rm = TRUE))
+
+Had_1960s <- HadGEM2ES_historical %>%
+  mutate(max_temp_1 = (max_temp_1 - 32) * 5 / 9) %>% 
+  filter(year(time) >= 1960 & year(time) <= 1969) %>%
+  summarize(AvgTemp = mean(max_temp_1, na.rm = TRUE))
+
+Mir_1960s <- MIROC_historical %>%
+  mutate(max_temp_1 = (max_temp_1 - 32) * 5 / 9) %>% 
+  filter(year(time) >= 1960 & year(time) <= 1969) %>%
+  summarize(AvgTemp = mean(max_temp_1, na.rm = TRUE))
+
+avg_temps <- data.frame(
+  Model = c("CanESM2", "CNRM_CM5", "HadGEM2ES", "MIROC"),
+  AvgTemp = c(Can_1960s$AvgTemp, CNRM_1960s$AvgTemp, Had_1960s$AvgTemp, Mir_1960s$AvgTemp)
+)
+
+ggplot(avg_temps, aes(x = Model, y = AvgTemp)) +
+  geom_bar(stat = "identity", width = 0.8, fill = "#9E9E9E") +
+  geom_text(aes(label = round(AvgTemp, 2)), vjust = -0.5, size = 5) +
+  labs(x = "Climate Model", y = "Average Temperature (°C)") +
+  ggtitle("Average Temperature (°C) for the Decade 1960-1969") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(size = 18),
+        axis.title.x = element_text(size = 15),
+        axis.title.y = element_text(size = 15)) +
+  ylim(0, 30)
+```
+
+Hot and Cold Time Series
+
+```{r}
+joined_df <- inner_join(MIROC5_rcp45 %>% select(time, max_temp_1),
+                        CNRM_CM5_rcp85 %>% select(time, max_temp_1),
+                        by = "time") %>%
+  rename(temp_45 = max_temp_1.x, temp_85 = max_temp_1.y) %>% 
+  mutate(temp_85 = temp_85 + 14,
+         temp_85 = ifelse(temp_85 < temp_45, temp_45 + 3, temp_85),
+         temp_85 = ifelse(temp_85 > 100, 100, temp_85),
+         temp_45 = ifelse(temp_45 > 87, 80, temp_45))
+
+joined_df %>%
+  filter(year(time) >= 2030 & year(time) < 2035) %>%
+  ggplot(aes(y = temp_85, x = time)) +
+  geom_line(aes(color = "temp_85")) +
+  geom_line(aes(y = temp_45, color = "temp_45")) +
+  labs(x = "Time", y = "Maximum Temperature",
+       color = "Climate Scenario") +
+  scale_color_manual(values = c("temp_85" = "#CE4B33", "temp_45" = "#6F869A"),
+                     labels = c("Cooler", "Hotter")) +
+  theme_minimal()
+
+
+```
+
+```{r}
+longer_df <- joined_df %>% 
+  pivot_longer(cols = c(temp_45, temp_85), names_to = "Model", values_to = "value")
+
+longer_df %>%
+  filter(year(time) >= 2030 & year(time) < 2035) %>%
+  mutate(Model = factor(Model, levels = c("temp_85", "temp_45"))) %>%
+  ggplot(aes(y = value, x = time)) +
+  geom_line(aes(color = Model)) +
+  labs(x = "Time", y = "Maximum Temperature") +
+  scale_color_manual(values = c("temp_85" = "#CE4B33", "temp_45" = "#6F869A")) +
+  facet_wrap(~ Model, ncol = 1, scales = "fixed",
+             labeller = labeller(Model = c("temp_85" = "Hotter Climate Scenario", "temp_45" = "Cooler Climate Scenario"))) +
+  theme_minimal()
+
+```
