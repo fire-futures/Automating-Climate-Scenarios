@@ -1,3 +1,0 @@
-Welcome to the "Creating Climate Scenarios and RHESSys Inputs" dashboard. The purpose of this dashboard is to allow scientists to efficiently extract or construct climate scenarios, generate [RHESSys](https://github.com/RHESSys/RHESSys) inputs for selected scenarios, and visualize these climate scenarios for communication with scientists, communities, and other stakeholders.
-
-Climate scenarios were contructed using downscaled climate model predictions from Cal-Adapt to provide meaningful statistical summaries around various climate future possibilities. These climate scenarios are then used as inputs for RHESSys to compile our model estimates of changing hydrology, vegetation growth and fire regimes for our selected test scenarios.

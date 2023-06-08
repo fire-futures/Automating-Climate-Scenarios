@@ -1,1 +1,0 @@
-Placeholder citation of Cal Adapt and any other sources that should be cited 
