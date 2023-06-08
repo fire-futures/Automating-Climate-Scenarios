@@ -1,4 +1,22 @@
-# get all the data from this GCM and RCP, including historical
+#' Get all climate data and adjust units for each grid cell of interest
+#'
+#' This function retrieves all the climate data for a given grid cell using the caladapt API, including historical and projected values for wind speed, relative humidity, temperature, and precipitation. It then converts the units to be compatible with RHESSys-fire input.
+#'
+#' @param grid_cell_id The ID of the grid cell.
+#' @param lat The latitude of the grid cell.
+#' @param lon The longitude of the grid cell.
+#' @param ui_gcm The GCM (Global Climate Model) identifier.
+#' @param ui_rcp The RCP (Representative Concentration Pathway) identifier.
+#'
+#' @return A joined data frame containing the climate data for the specified grid cell with adjusted units
+#' @export
+#' @examples
+#' grid_cell_id <- 1
+#' lat <- 34.42
+#' lon <- -119.7
+#' ui_gcm <- "GCM1"
+#' ui_rcp <- "RCP2.6"
+#' get_all_grid_cell_data(grid_cell_id, lat, lon, ui_gcm, ui_rcp)
 get_all_grid_cell_data <- function(grid_cell_id, lat, lon, ui_gcm, ui_rcp) {
   
   # Wind

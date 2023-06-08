@@ -21,6 +21,8 @@ library(leaflet)
 library(sf)
 library(httr)
 library(extrafont)
+library(lubridate)
+library(zoo)
 
 functions_path <- here("..", "climate-scenarios", "build_functions")
 source(file.path(functions_path, "get_all_grid_cell_data.R"))
@@ -36,10 +38,10 @@ ui_grid_cells <- c(46779)
 ui_rcp <- 85
 ui_gcm <- 'CanESM2'
 
-find_grid_cell_centroid() # creates the dataframe with the above user inputs that the get_all_grid_cell_data() function will use to grab data for
+find_grid_cell_centroid(ui_grid_cells = ui_grid_cells) # creates the dataframe with the above user inputs that the get_all_grid_cell_data() function will use to grab data for
 centroids_of_interest %>% pmap(get_all_grid_cell_data, ui_gcm = ui_gcm, ui_rcp = ui_rcp) # grabs data for all grid cells 
 
-CanESM2_85_46779 <- grid_cell_46779 %>% 
+CanESM2_85_46779 <- grid_cell_46779_CanESM2_85 %>% 
   mutate(model_rcp = 'CanESM2_85')
 
 # Model CanESM2 RCP 45
@@ -47,17 +49,11 @@ ui_grid_cells <- c(46779)
 ui_rcp <- 45
 ui_gcm <- 'CanESM2'
 
-find_grid_cell_centroid() # creates the dataframe with the above user inputs that the get_all_grid_cell_data() function will use to grab data for
+find_grid_cell_centroid(ui_grid_cells = ui_grid_cells) # creates the dataframe with the above user inputs that the get_all_grid_cell_data() function will use to grab data for
 centroids_of_interest %>% pmap(get_all_grid_cell_data, ui_gcm = ui_gcm, ui_rcp = ui_rcp) # grabs data for all grid cells
 
-CanESM2_45_46779 <- grid_cell_46779 %>% 
+CanESM2_45_46779 <- grid_cell_46779_CanESM2_45 %>% 
   mutate(model_rcp = 'CanESM2_45')
-```
-
-## Create Map Graphic
-
-```{r}
-
 ```
 
 ## Maximum Temperature: Combine Data and Plot
@@ -555,4 +551,3 @@ summary_model
 #   select(-group)
 ```
 
-## 
