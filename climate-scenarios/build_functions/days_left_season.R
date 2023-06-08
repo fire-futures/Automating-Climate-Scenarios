@@ -1,12 +1,14 @@
-# Season check function
-# This function determines the number of days until the start of the next season based on a given date.
-
-# Arguments:
-#   - date: A character string representing the date in the format "YYYY/MM/DD".
-
-# Returns:
-#   - days_to_next_season: An integer representing the number of days until the start of the next season.
-
+#' Season Check
+#'
+#' This function checks if a date falls in the 'wet' or 'dry' season, and then calculates 
+#' the number of days until the start of the next season. 
+#' 'Wet' season is defined as the months from November to April, 
+#' and 'dry' season is defined as the months from May to October.
+#'
+#' @param date A string representing the date in "yyyy-mm-dd" format.
+#'
+#' @return An integer representing the number of days until the start of the next season from the input date.
+#'
 season_check <- function(date) {
   date <- ymd(date)
   month_day <- day(date)

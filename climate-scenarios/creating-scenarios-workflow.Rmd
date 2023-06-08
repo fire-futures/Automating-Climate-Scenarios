@@ -41,7 +41,7 @@ Sourcing all of the functions needed to build scenarios & importing example data
 
 ```{r Source Functions}
 #obtain list of files ending in .R from build_functions
-r_files <- list.files("build_functions", pattern = "\\.R$", full.names = TRUE)
+r_files <- list.files("climate-scenarios/build_functions", pattern = "\\.R$", full.names = TRUE)
 #source in these files
 for (file in r_files) {
   source(file)
