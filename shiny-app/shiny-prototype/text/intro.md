@@ -1,0 +1,9 @@
+Welcome to the "Creating Climate Scenarios and RHESSys Inputs" dashboard. The purpose of this dashboard is to allow scientists to efficiently extract or construct climate scenarios, generate [RHESSys](https://github.com/RHESSys/RHESSys) inputs for selected scenarios, and visualize these climate scenarios for communication with scientists, communities, and other stakeholders. Climate scenarios were constructed using down-scaled climate model predictions from Ca-Adapt to provide meaningful summaries around various climate future possibilities. These climate scenarios can then be used as inputs for the ecohydrological model RHESSys to compile our model estimates of changing hydrology, vegetation growth and fire regimes.
+
+This dashboard contains 2 tabs: a welcome tab and a scenario builder tab. 
+
+The scenario builder tab allows users to construct their own customized scenarios. Users can specify the model, emission assumption, segment type (year vs season), climate criteria for each segment, start date, duration of scenario, sampling window, sampling grid cell, and spatial extent. Once satisfied with a scenario, users are able to hit “Download Scenario,” which downloads a folder containing metadata for the scenario, a csv file containing the time series for all climate variable, and a subfolder containing unique time-series ASCII files that can be input directly into RHESSys. 
+
+For more information about the process used and decisions made for the creation of this tool, please check out this [technical documentation](https://docs.google.com/document/d/1G1UKEErrcdLWn4X61f-iy2ByZO3PCXRP/edit#heading=h.psoig0rfj0i9) for the project.
+
+**Happy Scenario Building!**
