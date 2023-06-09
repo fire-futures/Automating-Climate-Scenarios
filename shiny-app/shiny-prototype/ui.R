@@ -1,7 +1,7 @@
 # dashboard header ----
 header <- dashboardHeader(
   
-  title = "Creating Climate Scenarios and RHESSys Inputs",
+  title = "Creating Climate Scenarios for RHESSys",
   titleWidth = 400
   
 ) # END dashboardHeader
