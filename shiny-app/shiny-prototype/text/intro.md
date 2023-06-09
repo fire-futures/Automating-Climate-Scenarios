@@ -4,6 +4,6 @@ This dashboard contains 2 tabs: a welcome tab and a scenario builder tab.
 
 The scenario builder tab allows users to construct their own customized scenarios. Users can specify the model, emission assumption, segment type (year vs season), climate criteria for each segment, start date, duration of scenario, sampling window, sampling grid cell, and spatial extent. Once satisfied with a scenario, users are able to hit “Download Scenario,” which downloads a folder containing metadata for the scenario, a csv file containing the time series for all climate variable, and a subfolder containing unique time-series ASCII files that can be input directly into RHESSys. 
 
-For more information about the process used and decisions made for the creation of this tool, please check out this [technical documentation](https://docs.google.com/document/d/1G1UKEErrcdLWn4X61f-iy2ByZO3PCXRP/edit#heading=h.psoig0rfj0i9) for the project.
+For more information about the process used and decisions made for the creation of this tool, please check out this [technical documentation](https://docs.google.com/document/d/1G1UKEErrcdLWn4X61f-iy2ByZO3PCXRP/edit#heading=h.psoig0rfj0i9) for the project. To learn about how you can use this tool, check out this [demonstrational video](https://app.screencastify.com/manage/videos/XTl04958thL5A0LzcRml)
 
 **Happy Scenario Building!**
