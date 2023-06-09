@@ -54,11 +54,7 @@ Using the Cal Adapt API, you can examine the Cal Adapt Map to find your grid cel
 
 ```{r Load CalAdapt Map}
 # function to load Cal Adapt grid cell map
-caladapt_map() 
-  # uncomment the below code to add pins on the map to view where certain latitude/longitude combinations are:
-  #%>%
-  #addMarkers(lng = -119.712140042592, lat = 34.441631834023) %>% 
-  #addMarkers(lng = -119.712466207413, lat = 34.4416245938738)
+caladapt_map() %>% addMarkers(lng = -119.712140042592, lat = 34.441631834023) # adjust the "addMarkers" lng and lat specifications to add pins on the map given your area of interest
 ```
 
 Assign your base data below

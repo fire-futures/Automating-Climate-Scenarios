@@ -1,3 +1,15 @@
+#' Yearly Precipitation Plot
+#'
+#' This function generates a line plot that represents the total yearly precipitation 
+#' for each 'Water Year'. A 'Water Year' is defined as beginning in October and ending in September.
+#'
+#' @param time_series A data frame that contains the precipitation data. 
+#'                    The data frame should contain the following variables: 
+#'                    sequence_date (date) and precip (numeric).
+#'
+#' @return A ggplot object that represents the total yearly precipitation per 'Water Year'.
+#'         The x-axis represents the 'Water Year' and the y-axis represents the total yearly precipitation. 
+#'
 precipitation_plot <- function(time_series){
   
   time_series %>% 
